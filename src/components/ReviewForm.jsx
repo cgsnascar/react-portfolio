@@ -1,100 +1,103 @@
 import React, { useState } from 'react';
 
 const ReviewForm = () => {
-    const [name, setName] = useState('');
     const [company, setCompany] = useState('');
+    const [name, setName] = useState('');
     const [review, setReview] = useState('');
     const [key, setKey] = useState('');
     const [message, setMessage] = useState('');
 
-    const handleSubmit = async (event) => {
-        event.preventDefault();
-
-        // Perform form validation if needed
-        if (!name || !company || !review || !key) {
-            setMessage('All fields are required.');
-            return;
-        }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
         try {
-            const response = await fetch('http://localhost:8080/api/submit-review', {
+            const response = await fetch('http://localhost:8080/api/review', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Content-Type': 'application/json',
                 },
-                body: new URLSearchParams({
-                    key: key,
-                    name: name,
-                    company: company,
-                    review: review,
-                }),
+                body: JSON.stringify({ company, name, review, key }),
             });
 
-            if (!response.ok) {
-                throw new Error('Network response was not ok.');
+            if (response.ok) {
+                setMessage('Review submitted successfully!');
+                setCompany('');
+                setName('');
+                setReview('');
+                setKey('');
+            } else {
+                setMessage('Failed to submit review. Please try again later.');
             }
-
-            const result = await response.text();
-            setMessage('Review submitted successfully!');
-            // Clear form fields after submission
-            setName('');
-            setCompany('');
-            setReview('');
-            setKey('');
         } catch (error) {
-            setMessage('Failed to submit review. Please try again later.');
             console.error('Error submitting review:', error);
+            setMessage('An error occurred. Please try again later.');
         }
     };
 
     return (
-        <div className="container mx-auto p-4">
-            <h2 className="text-3xl font-bold text-center mb-8">Submit a New Review</h2>
-            <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-4 max-w-md mx-auto">
-                <div className="mb-3">
-                    <label className="block text-gray-700 font-medium mb-1" htmlFor="name">Name:</label>
-                    <input
-                        type="text"
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded-sm text-sm"
-                    />
-                </div>
-                <div className="mb-3">
-                    <label className="block text-gray-700 font-medium mb-1" htmlFor="company">Company:</label>
+        <div className="max-w-md mx-auto mt-10 p-4 border border-gray-300 rounded-lg shadow-md">
+            <h2 className="text-xl font-semibold mb-4">Submit a Review</h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex flex-col">
+                    <label htmlFor="company" className="text-sm font-medium text-gray-700">Company</label>
                     <input
                         type="text"
                         id="company"
                         value={company}
                         onChange={(e) => setCompany(e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded-sm text-sm"
+                        required
+                        className="mt-1 p-2 border border-gray-300 rounded-md"
                     />
                 </div>
-                <div className="mb-3">
-                    <label className="block text-gray-700 font-medium mb-1" htmlFor="review">Review:</label>
+
+                <div className="flex flex-col">
+                    <label htmlFor="name" className="text-sm font-medium text-gray-700">Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        className="mt-1 p-2 border border-gray-300 rounded-md"
+                    />
+                </div>
+
+                <div className="flex flex-col">
+                    <label htmlFor="review" className="text-sm font-medium text-gray-700">Review</label>
                     <textarea
                         id="review"
                         value={review}
                         onChange={(e) => setReview(e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded-sm text-sm"
+                        required
                         rows="4"
-                    ></textarea>
+                        className="mt-1 p-2 border border-gray-300 rounded-md"
+                    />
                 </div>
-                <div className="mb-3">
-                    <label className="block text-gray-700 font-medium mb-1" htmlFor="key">Secret Key:</label>
+
+                <div className="flex flex-col">
+                    <label htmlFor="key" className="text-sm font-medium text-gray-700">API Key</label>
                     <input
                         type="text"
                         id="key"
                         value={key}
                         onChange={(e) => setKey(e.target.value)}
-                        className="w-full border border-gray-300 p-2 rounded-sm text-sm"
+                        required
+                        className="mt-1 p-2 border border-gray-300 rounded-md"
                     />
                 </div>
-                <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-sm text-sm">
-                    Submit
+
+                <button
+                    type="submit"
+                    className="w-full py-2 px-4 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600"
+                >
+                    Submit Review
                 </button>
-                {message && <p className="mt-4 text-center text-red-500 text-sm">{message}</p>}
+
+                {message && (
+                    <p className={`mt-4 ${message.includes('successfully') ? 'text-green-600' : 'text-red-600'}`}>
+                        {message}
+                    </p>
+                )}
             </form>
         </div>
     );
