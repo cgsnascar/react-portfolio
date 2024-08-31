@@ -12,15 +12,22 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func init() {
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
 // Function to connect to the database
 func connectDB() (*sql.DB, error) {
 	user := os.Getenv("DB_USER")
-    password := os.Getenv("DB_PASSWORD")
-    dbName := os.Getenv("DB_NAME")
-    host := os.Getenv("DB_HOST")
-    port := os.Getenv("DB_PORT")
+	password := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
 
-    dsn := user + ":" + password + "@tcp(" + host + ":" + port + ")/" + dbName
+	dsn := user + ":" + password + "@tcp(" + host + ":" + port + ")/" + dbName
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
@@ -33,23 +40,33 @@ func connectDB() (*sql.DB, error) {
 	return db, nil
 }
 
+// Define the Review and ReviewRequest structs
+type Review struct {
+	ID      int    `json:"id"`
+	Company string `json:"company"`
+	Name    string `json:"name"`
+	Review  string `json:"review"`
+}
+
+type ReviewRequest struct {
+	Name    string `json:"name"`
+	Company string `json:"company"`
+	Review  string `json:"review"`
+	Keyword string `json:"keyword"`
+}
+
+var db *sql.DB
+
 // Function to fetch reviews from the database
 func fetchReviews(db *sql.DB) ([]byte, error) {
-	rows, err := db.Query("SELECT id, company, name, review FROM reviews")
+	query := "SELECT id, company, name, review FROM reviews"
+	rows, err := db.Query(query)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	type Review struct {
-		ID      int    `json:"id"`
-		Company string `json:"company"`
-		Name    string `json:"name"`
-		Review  string `json:"review"`
-	}
-
 	var reviews []Review
-
 	for rows.Next() {
 		var review Review
 		if err := rows.Scan(&review.ID, &review.Company, &review.Name, &review.Review); err != nil {
@@ -57,16 +74,52 @@ func fetchReviews(db *sql.DB) ([]byte, error) {
 		}
 		reviews = append(reviews, review)
 	}
-
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
 	return json.Marshal(reviews)
 }
 
-func saveReview(db *sql.DB, name, company, review string) error {
-	_, err := db.Exec("INSERT INTO reviews (name, company, review) VALUES (?, ?, ?)", name, company, review)
+// Save Review Handler
+func saveReviewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var reviewRequest ReviewRequest
+	if err := json.NewDecoder(r.Body).Decode(&reviewRequest); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	expectedKeyword := os.Getenv("REVIEW_SUBMISSION_KEYWORD")
+	if reviewRequest.Keyword != expectedKeyword {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	review := Review{
+		Company: reviewRequest.Company,
+		Name:    reviewRequest.Name,
+		Review:  reviewRequest.Review,
+	}
+
+	if err := saveReview(review); err != nil {
+		log.Println("Error saving review:", err)
+		http.Error(w, "Failed to save review", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Review saved successfully"))
+}
+
+// Save Review Function
+func saveReview(review Review) error {
+	query := `INSERT INTO reviews (company, name, review) VALUES (?, ?, ?)`
+	_, err := db.Exec(query, review.Company, review.Name, review.Review)
 	return err
 }
 
@@ -106,8 +159,10 @@ type ContactRequest struct {
 	Name    string `json:"name"`
 	Email   string `json:"email"`
 	Message string `json:"message"`
+	Key     string `json:"key"`
 }
 
+// contactHandler handles POST requests to /api/contact
 // contactHandler handles POST requests to /api/contact
 func contactHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -146,8 +201,6 @@ func contactHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Message sent successfully"))
 }
 
-// sendEmail sends an email using the SMTP server
-
 func sendEmail(senderEmail, subject, body string) error {
 	from := os.Getenv("EMAIL")
 	apiKey := os.Getenv("SENDGRID_API_KEY") // Use your SendGrid API Key here
@@ -172,20 +225,14 @@ func sendEmail(senderEmail, subject, body string) error {
 }
 
 func main() {
-	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file:", err)
-	}
-
-	// Connect to the database
+	// Connect to database
 	db, dbErr := connectDB()
 	if dbErr != nil {
 		log.Fatal("Failed to connect to database:", dbErr)
 	}
 	defer db.Close()
 
-	// Endpoint to get reviews
+	// Review Endpoint
 	http.HandleFunc("/api/reviews", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -207,7 +254,7 @@ func main() {
 		w.Write(jsonData)
 	})
 
-	// Endpoint to get projects
+	// Projects Endpoint
 	http.HandleFunc("/api/projects", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -229,47 +276,11 @@ func main() {
 		w.Write(jsonData)
 	})
 
-	// Endpoint to submit a new review
-	http.HandleFunc("/api/submit-review", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		if r.Method == "POST" {
-			// Extract the key and review from the request
-			key := r.FormValue("key")
-			name := r.FormValue("name")
-			company := r.FormValue("company")
-			review := r.FormValue("review")
-
-			// Validate the key
-			if key != "Testing123" { // Replace "your-secret-key" with your actual key
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			// Save the review to the database
-			err := saveReview(db, name, company, review)
-			if err != nil {
-				log.Println("Error saving review to database:", err)
-				http.Error(w, "Failed to save review", http.StatusInternalServerError)
-				return
-			}
-
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
-
-	// Endpoint to handle contact requests
+	// Contact Endpoint
 	http.HandleFunc("/api/contact", contactHandler)
+
+	// Save Review Endpoint
+	http.HandleFunc("/api/saveReview", saveReviewHandler)
 
 	log.Println("Server started at :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
