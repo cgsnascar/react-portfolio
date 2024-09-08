@@ -75,7 +75,7 @@ const ReviewForm = () => {
                 </div>
 
                 <div className="flex flex-col">
-                    <label htmlFor="key" className="text-sm font-medium text-gray-700">API Key</label>
+                    <label htmlFor="key" className="text-sm font-medium text-gray-700">Secret Key</label>
                     <input
                         type="text"
                         id="key"
