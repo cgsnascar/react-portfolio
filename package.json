@@ -17,7 +17,7 @@
     "tailwindcss": "^3.4.10",
     "web-vitals": "^2.1.4"
   },
-  "homepage": "https://cgsnascar.github.io/react-portfolio",
+  "homepage": "https://cgsnascar.dev/",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
