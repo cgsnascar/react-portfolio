@@ -5,7 +5,7 @@ const DataDisplay = () => {
     const [data, setData] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:8080/api/reviews')
+        fetch('https://api.cgsnascar.dev/api/reviews')
             .then(response => response.json())
             .then(data => {
                 // Ensure data is an array before setting it

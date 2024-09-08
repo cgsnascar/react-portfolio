@@ -6,7 +6,7 @@ function Projects() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/projects')
+    fetch('https://api.cgsnascar.dev/api/projects')
       .then(response => response.json())
       .then(data => {
         setProjects(Array.isArray(data) ? data : []);
