@@ -48,7 +48,7 @@ function Projects() {
                     rel="noopener noreferrer"
                     className="text-indigo-600 hover:text-indigo-800 font-semibold"
                   >
-                    View Code
+                    {project.actionLabel} {/* Dynamic label: Show Code or Show Website */}
                   </a>
                 </div>
               </div>

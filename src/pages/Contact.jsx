@@ -8,25 +8,30 @@ const Contact = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    const response = await fetch('http://localhost:8080/api/contact', {
+  
+    try {
+      const response = await fetch('http://localhost:8080/api/contact', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            name: name,
-            email: email,
-            message: message,
+          name: name,
+          email: email,
+          message: message,
         }),
-    });
-
-    if (response.ok) {
-        alert('Message sent successfully!');
-    } else {
-        alert('Failed to send message. Please try again later.');
+      });
+  
+      if (response.ok) {
+        setStatus('Message sent successfully!');
+      } else {
+        setStatus('Failed to send message. Please try again later.');
+      }
+    } catch (error) {
+      setStatus('An error occurred. Please try again later.');
     }
-};
+  };
+  
 
 
   return (

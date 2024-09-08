@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -87,6 +88,7 @@ type Project struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Url         string `json:"url"`
+	ActionLabel string `json:"actionLabel"`
 }
 
 func fetchReviews(db *sql.DB) ([]byte, error) {
@@ -131,6 +133,14 @@ func fetchProjects(db *sql.DB) ([]byte, error) {
 		if err := rows.Scan(&project.ID, &project.Title, &project.Description, &project.Url); err != nil {
 			return nil, err
 		}
+
+		// Determine the action label based on the URL
+		if containsGitHub(project.Url) {
+			project.ActionLabel = "Show Code"
+		} else {
+			project.ActionLabel = "Show Website"
+		}
+
 		projects = append(projects, project)
 	}
 
@@ -140,6 +150,11 @@ func fetchProjects(db *sql.DB) ([]byte, error) {
 	}
 
 	return jsonData, nil
+}
+
+// containsGitHub checks if the URL contains "github.com"
+func containsGitHub(url string) bool {
+	return strings.Contains(url, "github.com")
 }
 
 func handleReviews(w http.ResponseWriter, r *http.Request) {
