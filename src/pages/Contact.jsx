@@ -37,7 +37,7 @@ const Contact = () => {
   return (
     <section id="contact" className="bg-gray-100 py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">Contact Me</h1>
+        <h2 className="text-3xl font-bold text-center mb-8">Contact Me</h2>
         <form onSubmit={handleSubmit} className="max-w-lg mx-auto">
           <div className="mb-4">
             <label className="block text-gray-700">Name:</label>

@@ -30,7 +30,7 @@ function Projects() {
   return (
     <section id="projects" className="bg-gray-100 py-8">
       <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold text-center mb-8">My Projects</h1>
+        <h2 className="text-3xl font-bold text-center mb-8">My Projects</h2>
         {projects.length === 0 ? (
           <div className="flex justify-center items-center h-48">
             <p className="text-center text-gray-600 text-xl">No projects available</p>
@@ -40,7 +40,7 @@ function Projects() {
             {projects.map(project => (
               <div key={project.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-2">{project.title}</h2>
+                  <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
                   <p className="text-gray-700 mb-4">{project.description}</p>
                   <a 
                     href={project.url} 
