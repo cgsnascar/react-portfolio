@@ -11,8 +11,6 @@ function Header() {
           <li><a href="#projects" className="hover:text-blue-500">Projects</a></li>
           <li><a href="#reviews" className="hover:text-blue-500">Reviews</a></li>
           <li><a href="#contact" className="hover:text-blue-500">Contact</a></li>
-          <li><a href="/blog" className="hover:text-blue-500">Blog</a></li>
-          <li><a href="/admin" className="hover:text-blue-500">Admin</a></li>
         </ul>
       </nav>
     </header>
