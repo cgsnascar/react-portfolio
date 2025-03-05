@@ -1,4 +1,5 @@
 import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import Header from "./components/header";
 import About from "./pages/About";
@@ -10,26 +11,40 @@ import DataDisplay from "./components/DataDisplay";
 
 function App() {
   return (
-    <div className="App">
-      <Helmet>
-        <title>Claudio Skala</title>
-        <meta
-          name="description"
-          content="Website portfolio for Claudio Skala"
-        />
-        <meta property="og:title" content="Claudio Skala" />
-        <meta
-          property="og:description"
-          content="Website portfolio for Claudio Skala"
-        />
-      </Helmet>
-      <Header />
-      <About />
-      <Projects />
-      <DataDisplay />
-      <Contact />
-      <Footer />
-    </div>
+    <Router>
+      <div className="App">
+        <Helmet>
+          <title>Claudio Skala | Junior Web Developer</title>
+          <meta
+            name="description"
+            content="Claudio Skala is an aspiring junior web developer."
+          />
+          <meta property="og:title" content="Claudio Skala Web Portfolio" />
+          <meta
+            property="og:description"
+            content="Claudio Skala is an aspiring junior web developer."
+          />
+        </Helmet>
+
+        <Header />
+
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <About />
+                <Projects />
+                <DataDisplay />
+                <Contact />
+              </>
+            }
+          />
+        </Routes>
+
+        <Footer />
+      </div>
+    </Router>
   );
 }
 

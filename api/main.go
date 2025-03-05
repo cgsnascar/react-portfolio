@@ -14,36 +14,42 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers globally
-		w.Header().Set("Access-Control-Allow-Origin", "*")                                              // Allow any origin, change to specific domain if needed
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")                            // Allow methods
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With") // Allow headers
+		// Allow only frontend origin (React app running on localhost:3000)
+		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+
+		// Allowed HTTP methods
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+		// Allowed headers
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Allow credentials (if using cookies or Authorization headers)
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 		// Handle preflight OPTIONS request
 		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
-		// Pass the request to the next handler
 		next.ServeHTTP(w, r)
 	})
 }
 
 var (
-	db             *sql.DB
-	smtpHost       string
-	smtpPort       string
-	smtpUsername   string
-	smtpPassword   string
-	contactFormKey string
-	reviewAPIKey   string
+	db           *sql.DB
+	smtpHost     string
+	smtpPort     string
+	smtpUsername string
+	smtpPassword string
+	reviewAPIKey string
 )
 
 func loadEnv() error {
@@ -387,6 +393,90 @@ func handleProjects(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonData)
 }
 
+// JWT/auth stuff
+var jwtKey = []byte("your-secret-key")
+
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type Claims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+func Login(w http.ResponseWriter, r *http.Request) {
+	var creds Credentials
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// Replace this with your actual user validation logic
+	if creds.Username != "admin" || creds.Password != "password" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	expirationTime := time.Now().Add(1 * time.Hour)
+	claims := &Claims{
+		Username: creds.Username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtKey)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+}
+
+func VerifyToken(w http.ResponseWriter, r *http.Request) {
+	tokenString := r.Header.Get("Authorization")[7:] // Remove "Bearer "
+
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenString := r.Header.Get("Authorization")[7:]
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+
+		if err != nil || !token.Valid {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+func protectedHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Access granted to protected route!"))
+}
+
 func main() {
 	r := mux.NewRouter().StrictSlash(true)
 
@@ -403,6 +493,7 @@ func main() {
 	}
 	defer db.Close()
 
+	// Apply CORS middleware BEFORE defining routes
 	r.Use(CORSMiddleware)
 
 	// Define routes
@@ -410,7 +501,11 @@ func main() {
 	r.HandleFunc("/api/reviews", handleReviews).Methods("GET", "POST")
 	r.HandleFunc("/api/contact", contactHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/projects", handleProjects).Methods("GET")
+	r.HandleFunc("/api/login", Login).Methods("POST", "OPTIONS") // Ensure login route allows OPTIONS
+	r.HandleFunc("/api/verify", VerifyToken).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/protected", AuthMiddleware(protectedHandler))
 
 	// Start the server
+	log.Println("Server running on port 8080...")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
