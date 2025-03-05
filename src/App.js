@@ -14,7 +14,9 @@ function App() {
     <Router>
       <div className="App">
         <Helmet>
-          <title>Claudio Skala | Junior Web Developer</title>
+          <title>
+            Claudio Skala | Aspiring Junior Web Developer and IT Professional
+          </title>
           <meta
             name="description"
             content="Claudio Skala is an aspiring junior web developer."
